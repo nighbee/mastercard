@@ -1,0 +1,77 @@
+services:
+  backend:
+    container_name: mastercard_backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Environment variables for the backend service are correctly loaded from the .env file
+    # The defaults are here as a fallback
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-mastercard_user}
+      - DB_PASSWORD=${DB_PASSWORD:-mastercard_pass}
+      - DB_NAME=${DB_NAME:-mastercard_db}
+      - DB_SSLMODE=${DB_SSLMODE:-disable}
+      - APP_PORT=${APP_PORT:-8080}
+      - APP_HOST=${APP_HOST:-0.0.0.0}
+    env_file:
+      - ./.env
+    networks:
+      - mastercard_network
+
+  postgres:
+    image: postgres:14-alpine
+    container_name: mastercard_postgres
+    restart: unless-stopped
+    # These variables also pull from the .env file. 
+    # The default values are a fallback, and the syntax is now corrected.
+    environment:
+      POSTGRES_USER: ${DB_USER:-mastercard_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-mastercard_pass}
+      POSTGRES_DB: ${DB_NAME:-mastercard_db}
+      PGDATA: /var/lib/postgresql/data/pgdata 
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # Corrected syntax here as well
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-mastercard_user} -d ${DB_NAME:-mastercard_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    env_file: 
+      - ./.env
+    networks:
+      - mastercard_network
+
+  # Optional: pgAdmin for database management (uncomment if needed)
+  # pgadmin:
+  #   image: dpage/pgadmin4:latest
+  #   container_name: mastercard_pgadmin
+  #   restart: unless-stopped
+  #   environment:
+  #     PGADMIN_DEFAULT_EMAIL: admin@mastercard.local
+  #     PGADMIN_DEFAULT_PASSWORD: admin
+  #   ports:
+  #     - "5050:80"
+  #   depends_on:
+  #     - postgres
+  #   networks:
+  #     - mastercard_network
+
+networks:
+  mastercard_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
