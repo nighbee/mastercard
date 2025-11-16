@@ -136,11 +136,11 @@ const Dashboard = () => {
       setMessages([
         {
           id: "welcome",
-          role: "assistant",
-          content: "Hello! I'm your NLP-to-SQL assistant. Ask me anything about your data. Try queries like 'Total transactions for Silk Pay in Q1 2024' or 'Top 5 merchants by revenue in Kazakhstan'.",
-          timestamp: new Date(),
-        },
-      ]);
+      role: "assistant",
+      content: "Hello! I'm your NLP-to-SQL assistant. Ask me anything about your data. Try queries like 'Total transactions for Silk Pay in Q1 2024' or 'Top 5 merchants by revenue in Kazakhstan'.",
+      timestamp: new Date(),
+    },
+  ]);
     }
   }, [conversationData, currentConversationId]);
 

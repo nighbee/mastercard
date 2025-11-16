@@ -53,6 +53,28 @@ func (s *ConversationService) GetConversations(userID uint, limit, offset int) (
 	return conversations, total, nil
 }
 
+// GetAllConversations retrieves all conversations (for managers and admins)
+func (s *ConversationService) GetAllConversations(limit, offset int) ([]models.Conversation, int64, error) {
+	var conversations []models.Conversation
+	var total int64
+
+	// Count total
+	if err := database.DB.Model(&models.Conversation{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Get all conversations with user info
+	if err := database.DB.Preload("User").
+		Order("updated_at DESC").
+		Limit(limit).
+		Offset(offset).
+		Find(&conversations).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return conversations, total, nil
+}
+
 // GetConversation retrieves a single conversation with messages
 func (s *ConversationService) GetConversation(conversationID, userID uint) (*models.Conversation, error) {
 	var conversation models.Conversation

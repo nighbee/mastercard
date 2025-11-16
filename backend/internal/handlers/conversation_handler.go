@@ -3,9 +3,13 @@ package handlers
 import (
 	"strconv"
 
+	"mastercard-backend/internal/database"
+	"mastercard-backend/internal/middleware"
+	"mastercard-backend/internal/models"
 	"mastercard-backend/internal/services"
 
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 )
 
 type ConversationHandler struct {
@@ -55,8 +59,15 @@ func (h *ConversationHandler) CreateConversation(c *fiber.Ctx) error {
 }
 
 // GetConversations retrieves all conversations for the user
+// Analyzers see only their own conversations, Managers and Admins see all conversations
 func (h *ConversationHandler) GetConversations(c *fiber.Ctx) error {
 	userID := c.Locals("userID").(uint)
+	user, ok := c.Locals("user").(*models.User)
+	if !ok || user == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Authentication required",
+		})
+	}
 
 	limit, _ := strconv.Atoi(c.Query("limit", "50"))
 	offset, _ := strconv.Atoi(c.Query("offset", "0"))
@@ -65,7 +76,19 @@ func (h *ConversationHandler) GetConversations(c *fiber.Ctx) error {
 		limit = 100
 	}
 
-	conversations, total, err := h.conversationService.GetConversations(userID, limit, offset)
+	// Check if user can view all conversations (manager or admin)
+	var conversations []models.Conversation
+	var total int64
+	var err error
+
+	if middleware.CanViewAllConversations(user) {
+		// Managers and admins can see all conversations
+		conversations, total, err = h.conversationService.GetAllConversations(limit, offset)
+	} else {
+		// Analyzers see only their own conversations
+		conversations, total, err = h.conversationService.GetConversations(userID, limit, offset)
+	}
+
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -81,8 +104,16 @@ func (h *ConversationHandler) GetConversations(c *fiber.Ctx) error {
 }
 
 // GetConversation retrieves a single conversation with messages
+// Analyzers can only view their own conversations, Managers and Admins can view all
 func (h *ConversationHandler) GetConversation(c *fiber.Ctx) error {
 	userID := c.Locals("userID").(uint)
+	user, ok := c.Locals("user").(*models.User)
+	if !ok || user == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Authentication required",
+		})
+	}
+
 	conversationID, err := strconv.ParseUint(c.Params("id"), 10, 32)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -90,16 +121,35 @@ func (h *ConversationHandler) GetConversation(c *fiber.Ctx) error {
 		})
 	}
 
-	conversation, err := h.conversationService.GetConversation(uint(conversationID), userID)
-	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": err.Error(),
+	// Check if user can view all conversations (manager or admin)
+	if middleware.CanViewAllConversations(user) {
+		// Managers and admins can view any conversation
+		var conversation models.Conversation
+		if err := database.DB.Where("id = ?", conversationID).
+			Preload("Messages", func(db *gorm.DB) *gorm.DB {
+				return db.Order("created_at ASC")
+			}).
+			Preload("User").
+			First(&conversation).Error; err != nil {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "Conversation not found",
+			})
+		}
+		return c.JSON(fiber.Map{
+			"conversation": conversation,
+		})
+	} else {
+		// Analyzers can only view their own conversations
+		conversation, err := h.conversationService.GetConversation(uint(conversationID), userID)
+		if err != nil {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+		return c.JSON(fiber.Map{
+			"conversation": conversation,
 		})
 	}
-
-	return c.JSON(fiber.Map{
-		"conversation": conversation,
-	})
 }
 
 // UpdateConversation updates a conversation

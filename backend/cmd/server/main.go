@@ -96,12 +96,22 @@ func main() {
 			conversations.Post("/:id/branch", conversationHandler.CreateBranch)
 		}
 
-		// Admin routes
-		admin := protected.Group("/admin", middleware.RequireRole("admin"))
+		// Admin routes (Manager and Admin access)
+		admin := protected.Group("/admin", middleware.RequireRole("manager", "admin"))
 		{
+			// User management (Manager and Admin can create, read, update)
 			admin.Get("/users", adminHandler.GetUsers)
+			admin.Post("/users", adminHandler.CreateUser)
+			admin.Put("/users/:id", adminHandler.UpdateUser)
+			
+			// Audit logs (Manager and Admin can view)
 			admin.Get("/audit-logs", adminHandler.GetAuditLogs)
+			
+			// Metrics (Manager and Admin can view)
 			admin.Get("/metrics", adminHandler.GetMetrics)
+			
+			// User deletion (Admin only)
+			admin.Delete("/users/:id", middleware.RequireRole("admin"), adminHandler.DeleteUser)
 		}
 	}
 
