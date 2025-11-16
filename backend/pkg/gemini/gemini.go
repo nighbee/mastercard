@@ -71,6 +71,76 @@ func (c *Client) GenerateSQL(naturalLanguageQuery string, schemaContext string, 
 	return sqlQuery, nil
 }
 
+// GenerateAnalysis generates conversational analysis and insights about query results
+func (c *Client) GenerateAnalysis(userQuery string, sqlQuery string, queryResults string, resultFormat string, conversationHistory []string) (string, error) {
+	ctx := context.Background()
+
+	// Build the analysis prompt
+	prompt := buildAnalysisPrompt(userQuery, sqlQuery, queryResults, resultFormat, conversationHistory)
+
+	// Generate response
+	resp, err := c.model.GenerateContent(ctx, genai.Text(prompt))
+	if err != nil {
+		return "", fmt.Errorf("failed to generate analysis: %w", err)
+	}
+
+	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+		return "", fmt.Errorf("no response from Gemini")
+	}
+
+	// Extract analysis text from response
+	analysis := string(resp.Candidates[0].Content.Parts[0].(genai.Text))
+	analysis = strings.TrimSpace(analysis)
+
+	return analysis, nil
+}
+
+// buildAnalysisPrompt constructs the prompt for generating conversational analysis
+func buildAnalysisPrompt(userQuery string, sqlQuery string, queryResults string, resultFormat string, history []string) string {
+	var prompt strings.Builder
+
+	prompt.WriteString("You are a helpful data analyst assistant. Your task is to provide conversational analysis and insights about query results.\n\n")
+	prompt.WriteString("You should:\n")
+	prompt.WriteString("1. Analyze the query results and provide meaningful insights\n")
+	prompt.WriteString("2. Explain what the data shows in a conversational, natural way\n")
+	prompt.WriteString("3. Identify patterns, trends, or interesting findings\n")
+	prompt.WriteString("4. Answer follow-up questions about the data\n")
+	prompt.WriteString("5. Be conversational and friendly, like ChatGPT\n")
+	prompt.WriteString("6. If asked about seasonality, trends, or 'why', provide analytical explanations\n")
+	prompt.WriteString("7. Write in a natural, engaging style\n\n")
+
+	if len(history) > 0 {
+		prompt.WriteString("Previous conversation context:\n")
+		for i, h := range history {
+			if i < 5 { // Limit to last 5 messages for context
+				prompt.WriteString(fmt.Sprintf("- %s\n", h))
+			}
+		}
+		prompt.WriteString("\n")
+	}
+
+	prompt.WriteString("User's Question: ")
+	prompt.WriteString(userQuery)
+	prompt.WriteString("\n\n")
+
+	prompt.WriteString("SQL Query Executed: ")
+	prompt.WriteString(sqlQuery)
+	prompt.WriteString("\n\n")
+
+	prompt.WriteString("Query Results (Format: ")
+	prompt.WriteString(resultFormat)
+	prompt.WriteString("):\n")
+	prompt.WriteString(queryResults)
+	prompt.WriteString("\n\n")
+
+	prompt.WriteString("Provide a conversational analysis and insights about these results. ")
+	prompt.WriteString("Be natural, engaging, and helpful. If the user asked a specific question, answer it directly. ")
+	prompt.WriteString("If they asked for analysis or insights, provide meaningful commentary about the data.\n\n")
+	prompt.WriteString("Your analysis:")
+
+	return prompt.String()
+}
+
 // buildPrompt constructs the prompt for Gemini
 func buildPrompt(query string, schemaContext string, history []string) string {
 	var prompt strings.Builder

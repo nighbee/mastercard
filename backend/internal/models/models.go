@@ -8,26 +8,26 @@ import (
 
 // User model
 type User struct {
-	ID           uint      `gorm:"primaryKey" json:"id"`
-	Email        string    `gorm:"uniqueIndex;not null" json:"email"`
-	PasswordHash string    `gorm:"column:password_hash;not null" json:"-"`
-	FullName     string    `gorm:"not null" json:"full_name"`
-	RoleID       *uint     `gorm:"index" json:"role_id"`
-	Role         *Role     `gorm:"foreignKey:RoleID" json:"role,omitempty"`
-	IsActive     bool      `gorm:"default:true" json:"is_active"`
+	ID           uint       `gorm:"primaryKey" json:"id"`
+	Email        string     `gorm:"uniqueIndex;not null" json:"email"`
+	PasswordHash string     `gorm:"column:password_hash;not null" json:"-"`
+	FullName     string     `gorm:"not null" json:"full_name"`
+	RoleID       *uint      `gorm:"index" json:"role_id"`
+	Role         *Role      `gorm:"foreignKey:RoleID" json:"role,omitempty"`
+	IsActive     bool       `gorm:"default:true" json:"is_active"`
 	LastLogin    *time.Time `json:"last_login,omitempty"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
 }
 
 // Role model
 type Role struct {
-	ID          uint       `gorm:"primaryKey" json:"id"`
-	Name        string     `gorm:"uniqueIndex;not null" json:"name"`
-	Description string     `json:"description,omitempty"`
+	ID          uint         `gorm:"primaryKey" json:"id"`
+	Name        string       `gorm:"uniqueIndex;not null" json:"name"`
+	Description string       `json:"description,omitempty"`
 	Permissions []Permission `gorm:"many2many:role_permissions;" json:"permissions,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	CreatedAt   time.Time    `json:"created_at"`
+	UpdatedAt   time.Time    `json:"updated_at"`
 }
 
 // Permission model
@@ -78,48 +78,49 @@ type Transaction struct {
 
 // Conversation model
 type Conversation struct {
-	ID                 uint       `gorm:"primaryKey" json:"id"`
-	UserID             uint       `gorm:"not null;index" json:"user_id"`
-	User               User       `gorm:"foreignKey:UserID" json:"user,omitempty"`
-	Title              *string    `json:"title,omitempty"`
-	ParentBranchID     *uint      `gorm:"index" json:"parent_branch_id,omitempty"`
-	ParentBranch       *Conversation `gorm:"foreignKey:ParentBranchID" json:"parent_branch,omitempty"`
-	BranchPointMessageID *uint    `json:"branch_point_message_id,omitempty"`
-	Messages           []Message  `gorm:"foreignKey:ConversationID" json:"messages,omitempty"`
-	CreatedAt          time.Time  `json:"created_at"`
-	UpdatedAt          time.Time  `json:"updated_at"`
+	ID                   uint          `gorm:"primaryKey" json:"id"`
+	UserID               uint          `gorm:"not null;index" json:"user_id"`
+	User                 User          `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	Title                *string       `json:"title,omitempty"`
+	ParentBranchID       *uint         `gorm:"index" json:"parent_branch_id,omitempty"`
+	ParentBranch         *Conversation `gorm:"foreignKey:ParentBranchID" json:"parent_branch,omitempty"`
+	BranchPointMessageID *uint         `json:"branch_point_message_id,omitempty"`
+	Messages             []Message     `gorm:"foreignKey:ConversationID" json:"messages,omitempty"`
+	CreatedAt            time.Time     `json:"created_at"`
+	UpdatedAt            time.Time     `json:"updated_at"`
 }
 
 // Message model
 type Message struct {
-	ID             uint       `gorm:"primaryKey" json:"id"`
-	ConversationID uint       `gorm:"not null;index" json:"conversation_id"`
-	Conversation   Conversation `gorm:"foreignKey:ConversationID" json:"conversation,omitempty"`
-	UserMessage    string     `gorm:"type:text;not null" json:"user_message"`
-	SQLQuery       *string    `gorm:"type:text" json:"sql_query,omitempty"`
-	ResultData     *string    `gorm:"type:jsonb" json:"result_data,omitempty"`
-	ResultFormat   *string    `gorm:"type:varchar(20)" json:"result_format,omitempty"` // text, table, chart, error
-	ErrorMessage   *string    `gorm:"type:text" json:"error_message,omitempty"`
-	ExecutionTimeMs *int      `json:"execution_time_ms,omitempty"`
-	CreatedAt      time.Time  `gorm:"index" json:"created_at"`
+	ID              uint         `gorm:"primaryKey" json:"id"`
+	ConversationID  uint         `gorm:"not null;index" json:"conversation_id"`
+	Conversation    Conversation `gorm:"foreignKey:ConversationID" json:"conversation,omitempty"`
+	UserMessage     string       `gorm:"type:text;not null" json:"user_message"`
+	SQLQuery        *string      `gorm:"type:text" json:"sql_query,omitempty"`
+	ResultData      *string      `gorm:"type:jsonb" json:"result_data,omitempty"`
+	ResultFormat    *string      `gorm:"type:varchar(20)" json:"result_format,omitempty"` // text, table, chart, error
+	ErrorMessage    *string      `gorm:"type:text" json:"error_message,omitempty"`
+	Analysis        *string      `gorm:"type:text" json:"analysis,omitempty"` // Conversational analysis and insights
+	ExecutionTimeMs *int         `json:"execution_time_ms,omitempty"`
+	CreatedAt       time.Time    `gorm:"index" json:"created_at"`
 }
 
 // AuditLog model
 type AuditLog struct {
-	ID              uint       `gorm:"primaryKey" json:"id"`
-	UserID          *uint      `gorm:"index" json:"user_id,omitempty"`
-	User            *User      `gorm:"foreignKey:UserID" json:"user,omitempty"`
-	Action          string     `gorm:"not null;index" json:"action"`
-	Resource        *string    `gorm:"index" json:"resource,omitempty"`
-	QueryText       *string    `gorm:"type:text" json:"query_text,omitempty"`
-	SQLExecuted     *string    `gorm:"type:text" json:"sql_executed,omitempty"`
-	ResultCount     *int       `json:"result_count,omitempty"`
-	IPAddress       *string    `gorm:"type:inet" json:"ip_address,omitempty"`
-	UserAgent       *string    `gorm:"type:text" json:"user_agent,omitempty"`
-	Status          *string    `gorm:"type:varchar(20);index" json:"status,omitempty"` // success, error, denied
-	ErrorMessage    *string    `gorm:"type:text" json:"error_message,omitempty"`
-	ExecutionTimeMs *int       `json:"execution_time_ms,omitempty"`
-	Timestamp       time.Time  `gorm:"index" json:"timestamp"`
+	ID              uint      `gorm:"primaryKey" json:"id"`
+	UserID          *uint     `gorm:"index" json:"user_id,omitempty"`
+	User            *User     `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	Action          string    `gorm:"not null;index" json:"action"`
+	Resource        *string   `gorm:"index" json:"resource,omitempty"`
+	QueryText       *string   `gorm:"type:text" json:"query_text,omitempty"`
+	SQLExecuted     *string   `gorm:"type:text" json:"sql_executed,omitempty"`
+	ResultCount     *int      `json:"result_count,omitempty"`
+	IPAddress       *string   `gorm:"type:inet" json:"ip_address,omitempty"`
+	UserAgent       *string   `gorm:"type:text" json:"user_agent,omitempty"`
+	Status          *string   `gorm:"type:varchar(20);index" json:"status,omitempty"` // success, error, denied
+	ErrorMessage    *string   `gorm:"type:text" json:"error_message,omitempty"`
+	ExecutionTimeMs *int      `json:"execution_time_ms,omitempty"`
+	Timestamp       time.Time `gorm:"index" json:"timestamp"`
 }
 
 // TableName overrides
@@ -162,4 +163,3 @@ func (u *User) BeforeUpdate(tx *gorm.DB) error {
 	u.UpdatedAt = time.Now()
 	return nil
 }
-

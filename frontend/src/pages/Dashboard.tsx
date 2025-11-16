@@ -25,6 +25,7 @@ interface DisplayMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  analysis?: string | null;
   results?: {
     type?: string;
     data?: any;
@@ -64,6 +65,7 @@ const Dashboard = () => {
           role: "user" as const,
           content: msg.user_message,
           timestamp: new Date(msg.created_at),
+          analysis: msg.analysis || undefined,
           // Store results separately - will be attached to assistant message
           results: {
             type: msg.result_format || undefined,
@@ -88,11 +90,23 @@ const Dashboard = () => {
           
           // Add assistant response with results if available
           if (msg.results && msg.results.result_format !== "error" && !msg.results.error_message) {
+            // Build content: analysis first, then "Here are the results:"
+            let assistantContent = "";
+            if (msg.analysis) {
+              assistantContent = msg.analysis;
+              if (msg.results.result_data) {
+                assistantContent += "\n\nHere are the results:";
+              }
+            } else {
+              assistantContent = "Here are the results:";
+            }
+            
             messagesWithResponses.push({
               id: `${msg.id}-response`,
               role: "assistant" as const,
-              content: "Here are the results:",
+              content: assistantContent,
               timestamp: msg.timestamp,
+              analysis: msg.analysis || undefined,
               results: msg.results, // Results only in assistant message
             });
           } else if (msg.results?.error_message) {
@@ -102,6 +116,15 @@ const Dashboard = () => {
               content: `Error: ${msg.results.error_message}`,
               timestamp: msg.timestamp,
               results: msg.results,
+            });
+          } else if (msg.analysis) {
+            // If there's analysis but no results (conversational response)
+            messagesWithResponses.push({
+              id: `${msg.id}-analysis`,
+              role: "assistant" as const,
+              content: msg.analysis,
+              timestamp: msg.timestamp,
+              analysis: msg.analysis,
             });
           }
         });

@@ -69,11 +69,40 @@ func (s *QueryService) ExecuteQuery(userID uint, query string, conversationID *u
 		return s.createErrorMessage(userID, conversationID, query, fmt.Sprintf("Query execution failed: %v", err), startTime)
 	}
 
+	// Generate conversational analysis
+	var analysis *string
+	if result != "" && resultFormat != "error" {
+		// Get conversation history for analysis context
+		var analysisHistory []string
+		if conversationID != nil && *conversationID > 0 {
+			var messages []models.Message
+			database.DB.Where("conversation_id = ?", *conversationID).
+				Order("created_at DESC").
+				Limit(5).
+				Find(&messages)
+
+			// Reverse to get chronological order
+			for i := len(messages) - 1; i >= 0; i-- {
+				analysisHistory = append(analysisHistory, messages[i].UserMessage)
+			}
+		}
+
+		// Generate analysis using Gemini
+		analysisText, err := s.geminiClient.GenerateAnalysis(query, sqlQuery, result, resultFormat, analysisHistory)
+		if err != nil {
+			// Log error but don't fail the query - analysis is optional
+			fmt.Printf("Warning: Failed to generate analysis: %v\n", err)
+		} else if analysisText != "" {
+			analysis = &analysisText
+		}
+	}
+
 	// Create message record
 	message := models.Message{
 		UserMessage:     query,
 		SQLQuery:        &sqlQuery,
 		ResultFormat:    &resultFormat,
+		Analysis:        analysis,
 		ExecutionTimeMs: &executionTime,
 	}
 

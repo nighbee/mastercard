@@ -62,6 +62,7 @@ export interface Message {
   result_data: string | null;
   result_format: 'text' | 'table' | 'chart' | 'error' | null;
   error_message: string | null;
+  analysis: string | null;
   execution_time_ms: number | null;
   created_at: string;
 }
