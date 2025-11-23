@@ -939,7 +939,7 @@ cat frontend/.env
 2. **SQL Validation Errors**:
    - Check backend logs for generated SQL
    - Verify schema context is correct
-   - May need to adjust prompt in `pkg/gemini/gemini.go`
+   - May need to adjust AI prompt configuration in Gemini client files
 
 3. **Database Timeouts**:
    - Increase `QUERY_TIMEOUT` in backend/.env
